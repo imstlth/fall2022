@@ -1,3 +1,4 @@
+#!/bin/env python3
 # Init data:
 width, height = [int(info) for info in input().split()]
 
