@@ -8,14 +8,16 @@ scrap_poss_weight = [3, 7, 6, 8, 4, 4]
 grid_scrap = []
 height = 0
 width = 0
+# Les variables qui contiennent les infos pour chaque joueur
 # Les positions de tous les robots
 bots_pos = {
     "ennemi": [],
     "self": []
 }
 # Le territoire
-territory = eval(repr(bots_pos))  # Le "template" est le même que bots_pos
-
+# Les emplacements des recycleurs (note : seuls ceux du joueur sont envoyés au programme)
+# La quantité de matiériaux pour chaque joueur
+territory, recycleurs, matter = (eval(repr(bots_pos)),) * 3  # Le "template" est le même que bots_pos
 
 # Return une liste plus son symétrique (utile pour la génération de la map)
 def symetry(liste):
@@ -25,11 +27,11 @@ def symetry(liste):
 # Génére la map (le scrap_amount)
 def gen_map():
     global height, width, grid_scrap
-    height = random.randint(6, 12)
+    height = random.randint(6, 12) - 1
     # On fait toujours une width paire comme ça c'est plus simple
-    width = height * 2
+    width = height * 2 + 1
     # On génère la map (le scrap_amount)
-    grid_scrap = [symetry([random.choices(scrap_poss, scrap_poss_weight)[0] for _c in range(height)]) for _l in range(height)]
+    grid_scrap = [symetry([random.choices(scrap_poss, scrap_poss_weight)[0] for _c in range(height + 1)]) for _l in range(height + 1)]
 
 
 # Génère la position de départ des bots.
@@ -37,7 +39,7 @@ def gen_starting():
     global bots_pos
     # On vérifie que les bots n'arrivent sur des cases avec de l'herbe
     while True:
-        starting_robots = [random.randint(0, height - 4), random.randint(0, height - 1)]
+        starting_robots = [random.randint(0, height - 3), random.randint(0, height)]  # Il y a minimum 3 d'écart avec la ligne du milieu
         # On vérifie chaque case de l'"étoile"
         star = ((-1, 0), (0, -1), (1, 0), (0, 1))  # (0, 0) n'est pas dedans car la case ne contient pas de bots
         for x, y in star + ((0, 0),):
@@ -51,3 +53,24 @@ def gen_starting():
             territory["ennemi"].append([width - starting_robots[0], height - starting_robots[1]])
             territory["self"].append([starting_robots[0], starting_robots[1]])
             break
+
+input_count = -1
+def game_input():
+    global input_count
+    if input_count == -1:
+        return str(width) + " " + str(height)
+    else:
+        line = input_count // width
+        col = input_count % height
+        scrap_amount = grid_scrap[line][col]
+        if [col, line] in territory["self"]:
+            owner = "1"
+        elif [col, line] in territory["ennemi"]:
+            owner = "0"
+        else:
+            owner = "-1"
+        units = bots_pos["self"].count([col, line])
+        recycler = "1" if [col, line] in recycleurs else "0"
+        can_build = "1" if scrap_amount != 0 and units == 0 else "0"
+        can_spawn = "1" if scrap_amount != 0 and recycler != "1" else "0"
+    input_count += 1
