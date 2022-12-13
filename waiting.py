@@ -6,9 +6,7 @@ width, height = [int(info) for info in input().split()]
 while True:
     # À re-remplir à chaque fois
     grid = []
-    _score_data = input().split()
-    # On cherche à maximiser le score (avoir le plus de territoire par rapport à l'ennemi)
-    score = int(_score_data[0]) - int(_score_data[1])
+    matter = int(input().split()[0])
     for line in range(height):
         line_data = []
         for col in range(width):
