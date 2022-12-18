@@ -27,12 +27,14 @@ star = ((-1, 0), (0, -1), (1, 0), (0, 1))  # (0, 0) n'est pas dedans car la case
 # Génére la map (le scrap_amount)
 def gen_map():
     global height, width, grid_scrap
-    height = random.randint(6, 12)
-    width = height * 2 + 1
+    # Pas les coordonnées des limites de la map
+    # -> Le nombre de case
+    height = random.randint(7, 13)
+    width = height * 2
     # On génère la map (le scrap_amount)
     half = []
-    for _col in range(height + 1):
-        half.append([random.choices(scrap_poss, scrap_poss_weight)[0] for _line in range(height + 1)])
+    for _col in range(height):
+        half.append([random.choices(scrap_poss, scrap_poss_weight)[0] for _line in range(height)])
     grid_scrap = eval(repr(half))
     for n_line in range(len(half)):
         grid_scrap[n_line] += half[-n_line - 1][::-1]
@@ -43,7 +45,7 @@ def gen_starting():
     global bots_pos, territory
     # On vérifie que les bots n'arrivent sur des cases avec de l'herbe
     while True:
-        starting_robots = [random.randint(1, height - 2), random.randint(1, height - 1)]  # Il y a minimum 2 d'écart avec la ligne du milieu
+        starting_robots = [random.randint(1, height - 3), random.randint(1, height - 2)]  # Il y a minimum 2 d'écart avec la ligne du milieu
         # On vérifie chaque case de l'"étoile"
         for x, y in star + ((0, 0),):
             # Si une des cases est de l'herbe, on relance une tentative
@@ -53,12 +55,12 @@ def gen_starting():
             # On rajoute chacune des positions de l'étoile (autour du point central)
             bots_pos["self"] = [[starting_robots[0] + x, starting_robots[1] + y] for x, y in star]
             # Les bots ennemis sont sur le même y, mais à l'opposé au niveau de x
-            bots_pos["ennemi"] = [[width - bot_x, bot_y] for bot_x, bot_y in bots_pos["self"]]
+            bots_pos["ennemi"] = [[width - bot_x - 1, height - bot_y - 1] for bot_x, bot_y in bots_pos["self"]]
             # Les emplacements des bots sont forcément dans le territoire
             territory = eval(repr(bots_pos))
             # On rajoute la case centrale (starting_robots)
             territory["self"].append([starting_robots[0], starting_robots[1]])
-            territory["ennemi"].append([width - starting_robots[0], starting_robots[1]])
+            territory["ennemi"].append([width - starting_robots[0] - 1, height - starting_robots[1] - 1])
             break
 
 # La fonction qui remplace "input"
@@ -75,15 +77,15 @@ def game_input():
         return str(width) + " " + str(height)
 
     # On augmente le compteur mais on le remet à 0 lorsque toutes les cases de la map ont été faites + 1 pour la quantité de matière
-    input_count = (input_count + 1) % ((width + 1) * (height + 1) + 1)
+    input_count = (input_count + 1) % (width * height + 1)
 
     if input_count == 0:
         return str(matter["self"]) + " " + str(matter["ennemi"])
 
     # On calcule à partir du compteur, la ligne et la colonne de la case.
     # On fait - 1 parce que 0 est pris pour renvoyer la quantité de matière
-    line = (input_count - 1) // (width + 1)
-    col = (input_count - 1) % (width + 1)
+    line = (input_count - 1) // width
+    col = (input_count - 1) % width
 
     # On récupère les informations.
 
@@ -137,9 +139,9 @@ def beam(beam_size, start, goal):
                     visited[tuple(next_case)] = n
                 if next_case == goal:
                     return backtrace(n, visited, goal)
+        buffer = sorted(expand_cases, key=distance) + buffer
         if buffer == []:
             return [start]
-        buffer = sorted(expand_cases, key=distance) + buffer
         n += 1
 
 def backtrace(n, visited, goal):
@@ -175,10 +177,10 @@ def game_print(command, owner="self"):
             start = [int(args[1]), int(args[2])]
             goal = [int(args[3]), int(args[4])]
             path = beam(2, start, goal)
-            real_amount = min([amount, bots_pos["self"].count(start)])
+            real_amount = min([amount, bots_pos[owner].count(start)])
             for _i in range(real_amount):
-                bots_pos["self"].remove(start)
-                bots_pos["self"].append(path[0])
+                bots_pos[owner].remove(start)
+                bots_pos[owner].append(path[0])
 
         elif action == "BUILD":
             x = int(args[0])
