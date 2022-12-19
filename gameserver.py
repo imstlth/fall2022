@@ -120,37 +120,56 @@ def game_input():
 
 # PATHFINDING ALGO -> BEAM (rayon de 3)
 def free(case):
+    # La case est libre si : c'est pas de l'herbe, ni un recycleur
     return grid_scrap[case[0]][case[1]] != 0 and case not in recyclers["self"] and case not in recyclers["ennemi"]
 
+# La fonction qui permet de trouver un chemin entre un point A et B avec l'algorithme beam
 def beam(beam_size, start, goal):
+    # La liste des cases à expand
     buffer = [start]
+    # Toutes les cases visitées et avec la profondeur à laquelle elles ont été visitées (la profondeur dans l'arbre)
     visited = {tuple(start): 0}
-    n = 0
+    deep = 0
+    # Une fonction qui renvoie la distance entre un point et le goal
     def distance(from_coords, to_coords=goal):
+        # Cette distance revient à ajouter les différences des coords
+        # Parce que c'est une grille où on ne peut pas aller en diagonale.
         return abs(from_coords[0] - to_coords[0]) + abs(from_coords[1] - to_coords[1])
+
+    # La boucle principale.
+    # Elle ne s'arrête que lorsque la fin a été trouvée ou que l'algo a exploré toutes les cases
     while True:
         expand_cases = []
+        # On expand les cases premières cases du buffer
         for _i in range(min([beam_size, len(buffer)])):
             case = buffer.pop(0)
+            # expand revient à la remplacer par toutes les cases à côté (star) disponibles et non visitées.
             for add in star:
                 next_case = [case[0] + add[0], case[1] + add[1]]
                 if tuple(next_case) not in visited.keys() and free(next_case):
                     expand_cases.append(next_case)
-                    visited[tuple(next_case)] = n
+                    visited[tuple(next_case)] = deep
+                # Si une des cases est le goal, on fait le backtracing
                 if next_case == goal:
-                    return backtrace(n, visited, goal)
-        buffer = sorted(expand_cases, key=distance) + buffer
-        if buffer == []:
-            return [start]
-        n += 1
+                    return backtrace(deep, visited, goal)
 
+        # On remplace les 4 cases qui ont pop par leurs cases expand
+        # Les cases sont triées par leur distance avec le goal
+        buffer = sorted(expand_cases, key=distance) + buffer
+        # Si à ce moment là, le buffer est vide, cela veut dire qu'on a expand toutes les cases possibles.
+        if buffer == []:
+            return [start]  # On retourne la case de départ
+        deep += 1
+
+# La fonction qui permet de faire le backtracing
 def backtrace(n, visited, goal):
-    backpath = [goal]
-    for reverse_n in range(n - 1, -1, -1):
+    backpath = [goal]  # On part du goal pour revenir au start
+    for reverse_deep in range(n - 1, -1, -1):  # On remonte la profondeur
         for add in star:
             voisin = [backpath[0][0] + add[0], backpath[0][1] + add[1]]
             try:
-                if visited[tuple(voisin)] == reverse_n:
+                # On voit si une cases voisine est moins profonde et on recommence à remonter à partir de cette case
+                if visited[tuple(voisin)] == reverse_deep:
                     backpath.insert(0, voisin)
                     break
             except:
@@ -162,13 +181,16 @@ def backtrace(n, visited, goal):
 def game_print(command, owner="self"):
     global matter, recyclers, bots_pos
 
+    # Les commandes sont séparées par des ;
     command_list = command.split(";")
+    # On organise les commandes pour faire les BUILD d'abord
     for n_cmd in range(len(command_list)):
         if command_list[n_cmd].startswith("BUILD"):
             command_list.insert(0, command_list.pop(n_cmd))
 
     for cmd in command_list:
 
+        # Chaque action possède des arguments
         args = cmd.split()[1:]
         action = cmd.split()[0]
 
@@ -176,8 +198,11 @@ def game_print(command, owner="self"):
             amount = int(args[0])
             start = [int(args[1]), int(args[2])]
             goal = [int(args[3]), int(args[4])]
+            # On calcule le chemin à prendre
             path = beam(2, start, goal)
+            # On vérifie qu'il y a bien le bon nombre de bots disponibles sur la case
             real_amount = min([amount, bots_pos[owner].count(start)])
+            # On les déplace
             for _i in range(real_amount):
                 bots_pos[owner].remove(start)
                 bots_pos[owner].append(path[0])
@@ -185,6 +210,7 @@ def game_print(command, owner="self"):
         elif action == "BUILD":
             x = int(args[0])
             y = int(args[1])
+            # On check que c'est possible de build sur la case
             if matter[owner] >= 10 and \
                     grid_scrap[y][x] != 0 and \
                     [x, y] not in bots_pos[owner] and \
@@ -196,6 +222,7 @@ def game_print(command, owner="self"):
             amount = int(args[0])
             x = int(args[1])
             y = int(args[2])
+            # Idem
             if matter[owner] >= 10 * amount and \
                     grid_scrap[y][x] != 0 and \
                     [x, y] not in recyclers[owner] and \

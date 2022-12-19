@@ -2,7 +2,7 @@
 # Init data:
 width, height = [int(info) for info in input().split()]
 
-# Boucle principale
+# START MAIN LOOP
 while True:
     # À re-remplir à chaque fois
     grid = []
@@ -24,3 +24,4 @@ while True:
         grid.append(line_data)
 
     print("WAIT")
+# END MAIN LOOP
