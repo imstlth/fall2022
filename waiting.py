@@ -1,9 +1,7 @@
-#!/bin/env python3
 # Init data:
 width, height = [int(info) for info in input().split()]
 
-# START MAIN LOOP
-while True:
+while True:  # START MAIN LOOP
     # À re-remplir à chaque fois
     grid = []
     matter = int(input().split()[0])

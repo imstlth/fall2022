@@ -76,16 +76,28 @@ def game_input():
         first_input = False
         return str(width) + " " + str(height)
 
-    # On augmente le compteur mais on le remet à 0 lorsque toutes les cases de la map ont été faites + 1 pour la quantité de matière
-    input_count = (input_count + 1) % (width * height + 1)
+    # On augmente le compteur mais on le remet à 0 lorsque toutes les cases de la map ont été faites + 1 pour la quantité de matière + 1 pour savoir si le jeu est fini
+    input_count = (input_count + 1) % (width * height + 2)
 
     if input_count == 0:
+        if print_count >= 200 or territory["self"] == [] or territory["ennemi"] == []:  # Il faudrait que l'on fasse la situation où 20 tours ce sont passés sans que rien n'ait bougé -> TODO si c'est trop lent
+            if len(territory["self"]) > len(territory["ennemi"]):
+                return "WIN"
+            elif len(territory["ennemi"]) > len(territory["self"]):
+                return "LOSE"
+            else:
+                return "EQUAL"
+        else:
+            return "RUNNING"
+
+
+    elif input_count == 1:
         return str(matter["self"]) + " " + str(matter["ennemi"])
 
     # On calcule à partir du compteur, la ligne et la colonne de la case.
     # On fait - 1 parce que 0 est pris pour renvoyer la quantité de matière
-    line = (input_count - 1) // width
-    col = (input_count - 1) % width
+    line = (input_count - 2) // width
+    col = (input_count - 2) % width
 
     # On récupère les informations.
 
@@ -177,9 +189,12 @@ def backtrace(n, visited, goal):
     return backpath
 
 
+print_count = 0
 # Cette fonction remplace print() dans le code
 def game_print(command, owner="self"):
-    global matter, recyclers, bots_pos
+    global matter, recyclers, bots_pos, print_count
+    if owner == "self":
+        print_count += 1  # Permet de compter le nombre de tours
 
     # Les commandes sont séparées par des ;
     command_list = command.split(";")
@@ -210,7 +225,7 @@ def game_print(command, owner="self"):
         elif action == "BUILD":
             x = int(args[0])
             y = int(args[1])
-            # On check que c'est possible de build sur la case
+            # On check que c'est possible de build sur la case
             if matter[owner] >= 10 and \
                     grid_scrap[y][x] != 0 and \
                     [x, y] not in bots_pos[owner] and \
