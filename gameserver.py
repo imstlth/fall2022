@@ -192,9 +192,66 @@ def backtrace(n, visited, goal):
 print_count = 0
 # Cette fonction remplace print() dans le code
 def game_print(command, owner="self"):
-    global matter, recyclers, bots_pos, print_count
-    if owner == "self":
+    global matter, recyclers, bots_pos, print_count, territory, grid_scrap
+    # Le tour ce fini vraiment, une fois que l'ennemi a dit son action
+    # Parce qu'il est toujours appelé une fois que self a fait un game_print
+    # C'est pourquoi c'est ici qu'il y a tout le code pour que le jeu soit cohérent
+    # Dans l'ordre :
+    # Faire combattre les unités (les retirer un par un)
+    # Mettre à jour le territoire
+    # Réduire le scrap_amount
+    # Les cases qui sont devenues de l'herbe suppriment les bots et les recycleurs sur elles
+    # +10 à la quantité de matière de chaque joueur.
+    if owner == "ennemi":
         print_count += 1  # Permet de compter le nombre de tours
+
+        # Fait combattre les bots (supprime ceux qui sont à la fois dans bots_pos["self"] et bots_pos["ennemi"]
+        for bot in bots_pos["self"]:
+            if bot in bots_pos["ennemi"]:
+                bots_pos["self"].remove(bot)
+                bots_pos["ennemi"].remove(bot)
+
+        # Changement de territoire
+        owners = ["self", "ennemi"]
+        for owner_i in range(1):
+            add_matter = 0
+            owner = owners[owner_i]
+            opposite = owners[owner_i - 1]
+
+            # Pour la position de chaque bot, on la rajoute à son territoire (si elle n'y est pas)
+            # et on l'enlève au territoire ennemi si elle y est.
+            for bot in bots_pos[owner]:
+                if bot not in territory[owner]:
+                    territory[owner].append(bot)
+                if bot in territory[opposite]:
+                    territory[opposite].remove(bot)
+
+            # On réduit le scrap_amount et on enlève tout ce qu'il y a sur la case si il atteint 0
+            # On l'enlève aussi du territoire auquel la case appartenait.
+            for recycler in recyclers[owner]:
+                for add in star + ((0, 0),):
+                    recycled_case = [recycler[0] + add[0], recycler[1] + add[1]]
+                    case_scrap_amount = grid_scrap[recycled_case[0]][recycled_case[1]]
+                    if case_scrap_amount == 0:
+                        continue
+                    grid_scrap[recycled_case[0]][recycled_case[1]] -= 1
+                    add_matter += 1
+                    if case_scrap_amount - 1 == 0:
+                        for owner in owners:
+                            if recycled_case in recyclers[owner]:
+                                recyclers[owner].remove(recycled_case)
+                            if recycled_case in bots_pos[owner]:
+                                # On supprime tous les bots de la case (jusqu'à que .remove renvoie une erreur)
+                                while True:
+                                    try:
+                                        bots_pos[owner].remove(recycled_case)
+                                    except:
+                                        break
+                            if recycled_case in territory[owner]:
+                                territory[owner].remove(recycled_case)
+
+            # On ajoute la quantité de matière générée par les recycleurs
+            matter[owner] += add_matter + 10
 
     # Les commandes sont séparées par des ;
     command_list = command.split(";")
@@ -246,11 +303,3 @@ def game_print(command, owner="self"):
                 bots_pos[owner] += eval(repr([[x, y]] * amount))
 
     matter[owner] += 10
-
-        # TODO:
-        # L'action des ennemis
-        # Enlever du scrap sur toutes les cases qui sont recylcées
-        # Vérifier que les recycleurs ne se détruisent pas
-        # Faire combattre les unités
-        # Changer le territoire sur des unités
-        # Supprimer les robots s'ils sont sur une case qui vient de devenir de l'herbe
